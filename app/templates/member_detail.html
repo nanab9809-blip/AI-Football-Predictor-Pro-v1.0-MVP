@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ member.username }} · Member{% endblock %}
+{% block page_title %}Member & License Center{% endblock %}
+{% block page_subtitle %}Profile, membership, security, license, and complete audit history{% endblock %}
+{% block content %}
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<section class="enterprise-hero compact-hero member-hero mb-4"><div><span class="eyebrow">MEMBER PROFILE</span><h2>{{ member.full_name or member.username }}</h2><p>@{{ member.username }} · {{ member.role|replace("_"," ")|title }}</p></div><div class="hero-actions"><a href="/members" class="btn btn-soft"><i class="bi bi-arrow-left me-1"></i> Back</a><span class="status-badge {% if member.status == 'ACTIVE' %}is-success{% elif member.status == 'EXPIRED' %}is-warning{% else %}is-danger{% endif %}">{{ member.status }}</span></div></section><div class="d-none">
+  <a href="/members" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Kembali</a>
+  <span class="badge fs-6 {% if member.status == 'ACTIVE' %}text-bg-success{% elif member.status == 'EXPIRED' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ member.status }}</span>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-4">
+    <div class="card-panel h-100">
+      <div class="member-profile-head"><span class="member-avatar member-avatar-lg">{{ (member.full_name or member.username)[:1]|upper }}</span><div><h2 class="mb-1">{{ member.full_name or member.username }}</h2><p class="text-secondary mb-0">@{{ member.username }}</p></div></div>
+      <hr>
+      <dl class="member-facts">
+        <div><dt>Role</dt><dd>{{ member.role|replace('_',' ') }}</dd></div>
+        <div><dt>Mulai aktif</dt><dd>{{ member.membership_started_at.strftime('%d-%m-%Y %H:%M') if member.membership_started_at else '—' }}</dd></div>
+        <div><dt>Berakhir</dt><dd>{{ member.membership_expires_at.strftime('%d-%m-%Y %H:%M') if member.membership_expires_at else 'Tanpa batas' }}</dd></div>
+        <div><dt>Sisa masa aktif</dt><dd>{% if member.days_remaining is none %}—{% else %}{{ member.days_remaining }} hari{% endif %}</dd></div>
+        <div><dt>Login terakhir</dt><dd>{{ member.last_login_at.strftime('%d-%m-%Y %H:%M') if member.last_login_at else 'Belum pernah' }}</dd></div>
+        <div><dt>Dibuat</dt><dd>{{ member.created_at.strftime('%d-%m-%Y %H:%M') if member.created_at else '—' }}</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card-panel mb-3">
+      <div class="section-heading"><div><h2>Edit Akun</h2><p>Role Admin tidak memiliki tanggal kedaluwarsa.</p></div></div>
+      {% if member.role != 'SUPER_ADMIN' %}
+      <form method="post" action="/members/{{ member.id }}/edit" class="row g-3">
+        <div class="col-md-5"><label class="form-label">Nama lengkap</label><input class="form-control" name="full_name" value="{{ member.full_name or '' }}"></div>
+        <div class="col-md-3"><label class="form-label">Role</label><select class="form-select" name="role"><option value="MEMBER" {% if member.role=='MEMBER' %}selected{% endif %}>Member</option><option value="ADMIN" {% if member.role=='ADMIN' %}selected{% endif %}>Admin</option></select></div>
+        <div class="col-md-4"><label class="form-label">Tanggal berakhir</label><input class="form-control" type="datetime-local" name="membership_expires_at" value="{{ member.membership_expires_at.strftime('%Y-%m-%dT%H:%M') if member.membership_expires_at else '' }}"></div>
+        <div class="col-12"><label class="form-label">Catatan perubahan</label><input class="form-control" name="note" placeholder="Opsional"></div>
+        <div class="col-12"><button class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan Perubahan</button></div>
+      </form>
+      {% else %}<div class="alert alert-info mb-0">Akun Super Admin utama dilindungi dan tidak dapat diubah.</div>{% endif %}
+    </div>
+
+    {% if member.role == 'MEMBER' %}
+    <div class="card-panel mb-3">
+      <div class="section-heading"><div><h2>License Access</h2><p>License aktif wajib untuk login member. Key baru hanya dibuat melalui Generate pertama atau Ganti License.</p></div></div>
+      {% if license_view.has_license %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><label class="form-label">License Key</label><div class="input-group"><input class="form-control font-monospace" value="{{ license_record.license_key }}" readonly id="licenseKey"><button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('licenseKey').value); this.innerText='Tersalin';"><i class="bi bi-copy"></i></button></div><div class="form-text">Jangan membagikan key ini kepada pihak lain.</div></div>
+        <div class="col-md-2"><label class="form-label">Status</label><div><span class="badge {% if license_view.can_disable %}text-bg-success{% elif license_record.status == 'REVOKED' %}text-bg-danger{% else %}text-bg-warning{% endif %}">{{ license_record.status }}</span></div></div>
+        <div class="col-md-2"><label class="form-label">Dibuat</label><div>{{ license_record.created_at.strftime('%d-%m-%Y %H:%M') if license_record.created_at else '—' }}</div></div>
+        <div class="col-md-2"><label class="form-label">Diperbarui</label><div>{{ license_record.updated_at.strftime('%d-%m-%Y %H:%M') if license_record.updated_at else '—' }}</div></div>
+      </div>
+      <div class="row g-2 align-items-end">
+        <div class="col-lg-5">
+          <form method="post" action="/members/{{ member.id }}/license/rotate" onsubmit="const b=this.querySelector('button'); if(!confirm('Ganti license? License lama langsung tidak berlaku dan tidak dapat digunakan kembali.')) return false; b.disabled=true; b.innerText='Memproses...';">
+            <label class="form-label">Alasan penggantian</label>
+            <div class="input-group"><input class="form-control" name="note" maxlength="200" placeholder="Contoh: key bocor atau pindah pengguna"><button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i> Ganti License</button></div>
+          </form>
+        </div>
+        <div class="col-lg-7"><div class="d-flex flex-wrap gap-2">
+          {% if license_record.status == 'ACTIVE' %}
+          <form method="post" action="/members/{{ member.id }}/license/status" onsubmit="this.querySelector('button').disabled=true"><input type="hidden" name="status" value="DISABLED"><button class="btn btn-outline-warning">Nonaktifkan License</button></form>
+          {% elif license_view.can_activate %}
+          <form method="post" action="/members/{{ member.id }}/license/status" onsubmit="this.querySelector('button').disabled=true"><input type="hidden" name="status" value="ACTIVE"><button class="btn btn-outline-success">Aktifkan License</button></form>
+          {% endif %}
+          {% if license_view.can_revoke %}
+          <form method="post" action="/members/{{ member.id }}/license/status" onsubmit="if(!confirm('Cabut license ini secara permanen? Untuk memberi akses kembali, Admin harus mengganti license.')) return false; this.querySelector('button').disabled=true"><input type="hidden" name="status" value="REVOKED"><button class="btn btn-outline-danger">Revoke License</button></form>
+          {% else %}
+          <span class="text-danger small align-self-center">License telah dicabut. Gunakan Ganti License untuk membuat key aktif baru.</span>
+          {% endif %}
+        </div></div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning">Member belum memiliki license. Generate hanya dapat dilakukan satu kali; setelah itu gunakan Ganti License.</div>
+      <form method="post" action="/members/{{ member.id }}/license/generate" onsubmit="const b=this.querySelector('button'); if(!confirm('Buat license pertama untuk member ini?')) return false; b.disabled=true; b.innerText='Memproses...';"><button class="btn btn-primary">Generate License</button></form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if member.role != 'SUPER_ADMIN' %}
+    <div class="card-panel">
+      <div class="section-heading"><div><h2>Keamanan & Status</h2><p>Reset password, aktifkan/nonaktifkan, atau hapus permanen.</p></div></div>
+      <div class="d-flex flex-wrap gap-2 align-items-end">
+        <form method="post" action="/members/{{ member.id }}/status"><input type="hidden" name="status" value="{{ 'DISABLED' if member.status == 'ACTIVE' else 'ACTIVE' }}"><button class="btn btn-outline-warning">{{ 'Nonaktifkan Akun' if member.status == 'ACTIVE' else 'Aktifkan Akun' }}</button></form>
+        <form method="post" action="/members/{{ member.id }}/reset-password" class="d-flex gap-2"><input class="form-control" type="password" name="new_password" minlength="8" placeholder="Password baru" required><button class="btn btn-outline-info text-nowrap">Reset Password</button></form>
+        <form method="post" action="/members/{{ member.id }}/delete" onsubmit="return confirm('Hapus akun ini secara permanen? Tindakan tidak dapat dibatalkan.')"><button class="btn btn-outline-danger">Hapus Permanen</button></form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card-panel">
+  <div class="section-heading"><div><h2>Riwayat Member</h2><p>Jejak pembuatan, perpanjangan, perubahan profil, status, dan reset password.</p></div></div>
+  <div class="table-responsive">
+    <table class="table align-middle"><thead><tr><th>Waktu</th><th>Aksi</th><th>Masa Aktif Lama</th><th>Masa Aktif Baru</th><th>Oleh</th><th>Catatan</th></tr></thead>
+      <tbody>{% for item in history %}<tr><td>{{ item.changed_at.strftime('%d-%m-%Y %H:%M') if item.changed_at else '—' }}</td><td><span class="badge text-bg-secondary">{{ item.action|replace('_',' ') }}</span></td><td>{{ item.old_expiry.strftime('%d-%m-%Y %H:%M') if item.old_expiry else '—' }}</td><td>{{ item.new_expiry.strftime('%d-%m-%Y %H:%M') if item.new_expiry else '—' }}</td><td>{{ item.changed_by_username or 'Sistem' }}</td><td>{{ item.note or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-secondary">Belum ada riwayat.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+
+{% if member.role == 'MEMBER' %}
+<div class="card-panel mt-3">
+  <div class="section-heading"><div><h2>Riwayat License</h2><p>Jejak pembuatan, pergantian, aktivasi, nonaktif, dan pencabutan license.</p></div></div>
+  <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Waktu</th><th>Aksi</th><th>Key Lama</th><th>Key Baru</th><th>Oleh</th><th>Catatan</th></tr></thead><tbody>
+  {% for item in license_history %}<tr><td>{{ item.changed_at.strftime('%d-%m-%Y %H:%M') if item.changed_at else '—' }}</td><td><span class="badge text-bg-secondary">{{ item.action }}</span></td><td class="font-monospace small">{{ item.old_key_masked or '—' }}</td><td class="font-monospace small">{{ item.new_key_masked or '—' }}</td><td>{{ item.changed_by_username or 'Sistem' }}</td><td>{{ item.note or '—' }}</td></tr>{% else %}<tr><td colspan="6" class="text-center text-secondary">Belum ada riwayat license.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+{% endblock %}

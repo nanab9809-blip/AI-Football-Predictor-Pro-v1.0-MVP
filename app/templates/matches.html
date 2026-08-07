@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Matches · {{ app_name }}{% endblock %}
+{% block page_title %}Matches{% endblock %}
+{% block content %}
+<div class="panel-card mb-3">
+  <p class="text-muted small mb-3">{% if view_live_api_matches %}Administrator melihat jadwal API; membuka Analisis tetap membaca snapshot database sampai tombol Refresh digunakan.{% else %}Member hanya melihat pertandingan dan analisis yang sudah tersimpan. Halaman ini tidak menggunakan kuota API.{% endif %}</p>
+  <form class="row g-2 align-items-end" method="get" action="/matches">
+    <div class="col-sm-8 col-md-4"><label class="form-label">Tanggal pertandingan</label><input type="date" class="form-control" name="match_date" value="{{ selected_date }}"></div>
+    <div class="col-sm-4 col-md-2"><button class="btn btn-primary w-100">Tampilkan</button></div>
+  </form>
+</div>
+{% if error %}<div class="alert alert-warning"><b>Data belum dapat dimuat.</b><br>{{ error }}</div>{% endif %}
+{% if not error and not groups %}<div class="panel-card text-center text-secondary py-5">Tidak ada pertandingan untuk tanggal ini.</div>{% endif %}
+{% for group in groups %}
+<div class="league-block mb-3">
+  <div class="league-header">
+    {% if group.league.logo %}<img src="{{ group.league.logo }}" alt="" width="28" height="28">{% endif %}
+    <div><b>{{ group.league.name }}</b><small>{{ group.league.country }}</small></div>
+  </div>
+  {% for item in group.fixtures %}
+  <div class="fixture-row">
+    <div class="fixture-time">{{ item.fixture.date[11:16] if item.fixture.date else '-' }}</div>
+    <div class="team home"><span>{{ item.teams.home.name }}</span><img src="{{ item.teams.home.logo }}" alt=""></div>
+    <div class="score-box">{% if item.goals.home is not none %}{{ item.goals.home }} - {{ item.goals.away }}{% else %}VS{% endif %}</div>
+    <div class="team away"><img src="{{ item.teams.away.logo }}" alt=""><span>{{ item.teams.away.name }}</span></div>
+    <div class="d-flex gap-2 align-items-center"><span class="badge text-bg-secondary">{{ item.fixture.status.short }}</span><a class="btn btn-sm btn-primary" href="/match/{{ item.fixture.id }}">Analisis</a></div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

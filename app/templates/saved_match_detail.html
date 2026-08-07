@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block page_title %}Saved Match Analysis{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+{% if prediction %}
+<div class="panel-card mb-3"><span class="eyebrow">READ-ONLY DATABASE SNAPSHOT</span><h3 class="mt-2">{{ prediction.home_team }} vs {{ prediction.away_team }}</h3><p class="text-muted">{{ prediction.league }} · {{ prediction.fixture_date or prediction.created_at }}</p></div>
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="metric-card"><div class="metric-label">Selected Pick</div><div class="metric-value" style="font-size:1.25rem">{{ prediction.pick }}</div></div></div>
+  <div class="col-md-3"><div class="metric-card"><div class="metric-label">Probability</div><div class="metric-value">{% if prediction.probability is not none %}{{ ((prediction.probability*100) if prediction.probability <= 1 else prediction.probability)|round(1) }}%{% else %}-{% endif %}</div></div></div>
+  <div class="col-md-3"><div class="metric-card"><div class="metric-label">Confidence</div><div class="metric-value">{{ (prediction.confidence or 0)|round(1) }}%</div></div></div>
+  <div class="col-md-3"><div class="metric-card"><div class="metric-label">Data Quality</div><div class="metric-value">{{ (prediction.pqi or 0)|round(1) }}</div></div></div>
+</div>
+<div class="panel-card mb-3"><h5>Decision Snapshot</h5><div class="analysis-grid"><div><span>Status</span><b>{{ prediction.pick_role or payload.get('decision_status','MODEL PICK') }}</b></div><div><span>Odds</span><b>{{ prediction.odds or '-' }}</b></div><div><span>EV</span><b>{% if prediction.ev is not none %}{{ (prediction.ev*100)|round(1) }}%{% else %}-{% endif %}</b></div><div><span>Fixture Status</span><b>{{ prediction.fixture_status or '-' }}</b></div></div></div>
+{% set portfolio=payload.get('builder_portfolio') or [] %}{% if portfolio %}<div class="panel-card mb-3"><span class="eyebrow">SPORTSBOOK BUILDER PORTFOLIO</span>{% for builder in portfolio[:3] %}<div class="border-bottom py-2"><b>#{{ builder.get('portfolio_rank', loop.index) }} {{ builder.get('portfolio_label','BUILDER') }} · {{ builder.get('combined_label','-') }}</b><br><small>{{ builder.get('builder_dna','-') }} · Quality {{ builder.get('builder_quality','-') }} · Probability {{ builder.get('probability_pct','-') }}%</small></div>{% endfor %}</div>{% endif %}
+{% if refresh_match_analysis %}<div class="panel-card"><p class="text-muted">Snapshot lengkap belum tersimpan untuk versi lama ini.</p><form method="post" action="/match/{{ prediction.fixture_id }}/refresh"><button class="btn btn-primary">Refresh & Simpan Analisis Lengkap</button></form></div>{% else %}<div class="alert alert-info">Analisis rinci belum tersimpan pada snapshot lama. Hubungi Administrator untuk melakukan refresh.</div>{% endif %}
+{% elif refresh_match_analysis and fixture_id %}<div class="panel-card"><form method="post" action="/match/{{ fixture_id }}/refresh"><button class="btn btn-primary">Buat Analisis Tersimpan</button></form></div>{% endif %}
+{% endblock %}

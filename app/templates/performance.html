@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block page_title %}Performance Intelligence{% endblock %}
+{% block page_subtitle %}Settlement adalah satu-satunya sumber statistik model, market, liga, dan Sportsbook Builder AI{% endblock %}
+{% block content %}
+{% set o = intelligence.overall %}{% set s = intelligence.score %}{% set risk = o.extra or {} %}
+<section class="panel-card performance-hero mb-3">
+  <div>
+    <span class="eyebrow">AI PERFORMANCE INTELLIGENCE</span>
+    <h2>Performance Score {{ s.grade }} · {{ '%.1f'|format(s.score or 0) }}/100</h2>
+    <p class="text-muted mb-0">Semua angka berasal dari hasil Settlement. MONITOR/NO BET tidak dihitung sebagai taruhan kecuali kelak memiliki shadow settlement terpisah.</p>
+  </div>
+  <span class="badge-soft {% if (o.roi or 0) > 0 %}success{% elif (o.roi or 0) < 0 %}danger{% endif %}">
+    {% if (s.sample or 0) < 30 %}PROVISIONAL{% elif (o.roi or 0) > 0 %}PROFITABLE{% elif (o.roi or 0) < 0 %}REVIEW REQUIRED{% else %}MONITORING{% endif %}
+  </span>
+</section>
+
+<div class="row g-3 mb-4">
+{% for label,value,meta in [
+ ('Settled', o.sample or 0, (o.wins or 0)|string + ' W · ' + (o.losses or 0)|string + ' L · ' + (o.voids or 0)|string + ' V'),
+ ('Accuracy', '%.1f%%'|format(o.accuracy or 0), 'WIN / keputusan WIN+LOSS'),
+ ('Profit', '%+.2f u'|format(o.profit or 0), 'Unit stake settlement'),
+ ('ROI', '%+.1f%%'|format(o.roi or 0), 'Profit / total stake'),
+ ('Yield', '%+.1f%%'|format(o.yield_pct or 0), 'Return per settled recommendation'),
+ ('CLV', '%+.2f%%'|format(o.avg_clv or 0), 'Average closing-line value'),
+ ('Avg Odds', '%.2f'|format(o.avg_odds or 0), 'Odds rekomendasi settled'),
+ ('Avg EV', '%+.1f%%'|format(o.avg_ev or 0), 'Expected value saat rekomendasi')
+] %}
+<div class="col-6 col-xl-3"><div class="metric-card h-100"><div class="metric-label">{{ label }}</div><div class="metric-value">{{ value }}</div><div class="metric-meta">{{ meta }}</div></div></div>
+{% endfor %}
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-xl-7"><section class="panel-card h-100">
+    <div class="section-heading"><div><span class="eyebrow">PROFITABILITY INTELLIGENCE</span><h3>Risk & return</h3></div></div>
+    <div class="analysis-grid">
+      <div><span>Longest Win Streak</span><b>{{ risk.longest_win_streak or 0 }}</b></div>
+      <div><span>Longest Lose Streak</span><b>{{ risk.longest_lose_streak or 0 }}</b></div>
+      <div><span>Maximum Drawdown</span><b>{{ '%+.2f u'|format(risk.max_drawdown or 0) }}</b></div>
+      <div><span>Profit Factor</span><b>{{ '%.2f'|format(risk.profit_factor or 0) }}</b></div>
+      <div><span>Recovery Factor</span><b>{{ '%.2f'|format(risk.recovery_factor or 0) }}</b></div>
+      <div><span>Sample Stability</span><b>{{ 'STABLE' if (o.sample or 0) >= 100 else ('BUILDING' if (o.sample or 0) >= 30 else 'PROVISIONAL') }}</b></div>
+    </div>
+  </section></div>
+  <div class="col-12 col-xl-5"><section class="panel-card h-100">
+    <div class="section-heading"><div><span class="eyebrow">AI SCORE BREAKDOWN</span><h3>Komponen nilai</h3></div></div>
+    <div class="status-list">
+      <div><span>Accuracy</span><strong>{{ '%.1f'|format(s.accuracy_component or 0) }}</strong></div>
+      <div><span>ROI</span><strong>{{ '%.1f'|format(s.roi_component or 0) }}</strong></div>
+      <div><span>Yield</span><strong>{{ '%.1f'|format(s.yield_component or 0) }}</strong></div>
+      <div><span>CLV</span><strong>{{ '%.1f'|format(s.clv_component or 0) }}</strong></div>
+      <div><span>Decision Consistency</span><strong>{{ '%.1f'|format(s.decision_component or 0) }}</strong></div>
+      <div><span>Builder</span><strong>{{ '%.1f'|format(s.builder_component or 0) }}</strong></div>
+      <div><span>Consistency</span><strong>{{ '%.1f'|format(s.consistency_component or 0) }}</strong></div>
+    </div>
+  </section></div>
+</div>
+
+<section class="panel-card mb-4">
+  <div class="section-heading"><div><span class="eyebrow">DECISION PERFORMANCE</span><h3>Decision Ladder</h3></div><span class="badge-soft">Settlement only</span></div>
+  <div class="table-responsive performance-table-wrap"><table class="table align-middle performance-table">
+    <thead><tr><th>Decision</th><th>Sample</th><th>W/L/V</th><th>Accuracy</th><th>Profit</th><th>ROI</th><th>Avg Odds</th><th>CLV</th></tr></thead>
+    <tbody>{% for r in intelligence.decision %}<tr>
+      <td><strong>{{ r.dimension_value|replace('_',' ') }}</strong></td><td>{{ r.sample }}</td><td>{{ r.wins }}/{{ r.losses }}/{{ r.voids }}</td>
+      <td>{{ '%.1f%%'|format(r.accuracy or 0) if r.sample else 'N/A' }}</td>
+      <td class="{% if (r.profit or 0)>0 %}text-success{% elif (r.profit or 0)<0 %}text-danger{% endif %}">{{ '%+.2f'|format(r.profit or 0) }}</td>
+      <td>{{ '%+.1f%%'|format(r.roi or 0) if r.sample else 'N/A' }}</td><td>{{ '%.2f'|format(r.avg_odds or 0) if r.sample else '-' }}</td><td>{{ '%+.2f%%'|format(r.avg_clv or 0) if r.sample else '-' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<section class="panel-card mb-4">
+  <div class="section-heading"><div><span class="eyebrow">BUILDER PERFORMANCE</span><h3>Performance berdasarkan Builder DNA</h3></div><span class="badge-soft">{{ intelligence.builder|length }} DNA</span></div>
+  <p class="text-muted small">ROI Builder hanya dihitung bila bookmaker odds lengkap saat Builder dibuat. Hasil builder tetap dapat dievaluasi untuk Win Rate meskipun odds belum lengkap.</p>
+  <div class="table-responsive performance-table-wrap"><table class="table align-middle performance-table">
+    <thead><tr><th>Builder DNA</th><th>Sample</th><th>W/L/V</th><th>Win Rate</th><th>Profit</th><th>ROI</th><th>Avg Odds</th><th>Rating</th></tr></thead>
+    <tbody>{% for r in intelligence.builder %}<tr>
+      <td><strong>{{ r.dimension_value }}</strong></td><td>{{ r.sample }}</td><td>{{ r.wins }}/{{ r.losses }}/{{ r.voids }}</td><td>{{ '%.1f%%'|format(r.accuracy or 0) }}</td>
+      <td class="{% if (r.profit or 0)>0 %}text-success{% elif (r.profit or 0)<0 %}text-danger{% endif %}">{{ '%+.2f'|format(r.profit or 0) }}</td><td>{{ '%+.1f%%'|format(r.roi or 0) if (r.stake or 0)>0 else 'N/A' }}</td><td>{{ '%.2f'|format(r.avg_odds or 0) if (r.avg_odds or 0)>0 else '-' }}</td><td>{{ r.extra.rating or 'MONITOR' }}</td>
+    </tr>{% else %}<tr><td colspan="8" class="text-center text-muted py-4">Belum ada Builder yang memiliki hasil final.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<div class="row g-3 mb-4">
+  {% for title,eyebrow,rows in [('Performance per Market','MARKET INTELLIGENCE',intelligence.market),('Performance per Liga','LEAGUE INTELLIGENCE',intelligence.league)] %}
+  <div class="col-12 col-xl-6"><section class="panel-card h-100"><div class="section-heading"><div><span class="eyebrow">{{ eyebrow }}</span><h3>{{ title }}</h3></div><span class="badge-soft">{{ rows|length }}</span></div>
+  <div class="table-responsive performance-table-wrap"><table class="table align-middle performance-table"><thead><tr><th>Nama</th><th>Sample</th><th>Akurasi</th><th>ROI</th><th>Profit</th><th>CLV</th><th>Rating</th></tr></thead><tbody>
+  {% for r in rows %}<tr><td><strong>{{ r.dimension_value|replace('_',' ') }}</strong></td><td>{{ r.sample }}</td><td>{{ '%.1f%%'|format(r.accuracy or 0) }}</td><td>{{ '%+.1f%%'|format(r.roi or 0) }}</td><td class="{% if (r.profit or 0)>0 %}text-success{% elif (r.profit or 0)<0 %}text-danger{% endif %}">{{ '%+.2f'|format(r.profit or 0) }}</td><td>{{ '%+.2f%%'|format(r.avg_clv or 0) }}</td><td>{{ r.extra.rating or 'MONITOR' }}</td></tr>
+  {% else %}<tr><td colspan="7" class="text-center text-muted py-4">Belum ada settlement.</td></tr>{% endfor %}</tbody></table></div></section></div>
+  {% endfor %}
+</div>
+
+<section class="panel-card mb-4"><div class="section-heading"><div><span class="eyebrow">PERFORMANCE TIMELINE</span><h3>Tren settlement</h3></div></div>
+<div class="row g-3">{% for r in intelligence.timeline %}<div class="col-6 col-xl-3"><div class="metric-card"><div class="metric-label">{{ r.period_key }}</div><div class="metric-value">{{ '%+.1f%%'|format(r.roi or 0) }}</div><div class="metric-meta">{{ r.sample }} settled · Accuracy {{ '%.1f'|format(r.accuracy or 0) }}% · Profit {{ '%+.2f'|format(r.profit or 0) }}u</div></div></div>{% endfor %}</div>
+</section>
+
+<section class="panel-card"><div class="section-heading"><div><span class="eyebrow">AI RECOMMENDATION</span><h3>Performance Learning Insights</h3></div><span class="badge-soft">Audit only</span></div>
+<p class="text-muted small">V13.1 memberi rekomendasi berbasis settlement, tetapi tidak mengubah bobot Decision Engine secara otomatis. Perubahan bobot tetap memerlukan sampel memadai dan validasi eksplisit agar model tidak overfit.</p>
+<div class="status-list">{% for item in intelligence.insights %}<div><span><strong>{{ item.title }}</strong><small class="d-block text-muted">{{ item.message }}</small></span><strong>{{ item.kind }}</strong></div>{% else %}<div><span>Belum ada insight</span><strong>MONITOR</strong></div>{% endfor %}</div></section>
+{% endblock %}

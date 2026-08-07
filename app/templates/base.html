@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="id" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1220">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}?v=11.0.0">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <a class="brand" href="/" aria-label="Today Picks">
+          <span class="brand-mark"><i class="bi bi-dribbble"></i></span>
+          <span class="brand-copy"><strong>AI Football</strong><small>Decision Support</small></span>
+        </a>
+        <button class="sidebar-close d-lg-none" id="sidebarClose" aria-label="Tutup menu"><i class="bi bi-x-lg"></i></button>
+      </div>
+
+      <nav class="sidebar-nav">
+        {% set path = request.url.path %}
+        <a class="nav-item {{ 'active' if path == '/' else '' }}" href="/"><i class="bi bi-stars"></i><span>Decision Center</span></a>
+        <a class="nav-item {{ 'active' if path == '/dashboard' else '' }}" href="/dashboard"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+        {% if view_saved_matches %}<a class="nav-item {{ 'active' if path.startswith('/matches') or path.startswith('/match/') else '' }}" href="/matches"><i class="bi bi-calendar3"></i><span>Matches</span></a>{% endif %}
+        <a class="nav-item {{ 'active' if path.startswith('/predictions') else '' }}" href="/predictions"><i class="bi bi-bullseye"></i><span>Predictions</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/intelligence') else '' }}" href="/intelligence"><i class="bi bi-cpu"></i><span>Intelligence Lab</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/bet-builder') else '' }}" href="/bet-builder"><i class="bi bi-layers"></i><span>Bet Builder</span></a>
+        {% if run_scanner %}<a class="nav-item {{ 'active' if path.startswith('/scanner') else '' }}" href="/scanner"><i class="bi bi-search"></i><span>Scanner</span></a>{% endif %}
+        <div class="nav-label">Analytics</div>
+        <a class="nav-item {{ 'active' if path.startswith('/backtesting') else '' }}" href="/backtesting"><i class="bi bi-activity"></i><span>Backtesting</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/paper-trading') else '' }}" href="/paper-trading"><i class="bi bi-wallet2"></i><span>Paper Trading</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/performance') else '' }}" href="/performance"><i class="bi bi-bar-chart-line"></i><span>Performance</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/reliability') else '' }}" href="/reliability"><i class="bi bi-shield-check"></i><span>Reliability</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/data-quality') else '' }}" href="/data-quality"><i class="bi bi-database-check"></i><span>Data Quality</span></a>
+        {% if run_automation or is_admin_user %}<div class="nav-label">System</div>{% endif %}
+        {% if run_automation %}<a class="nav-item {{ 'active' if path.startswith('/automation') else '' }}" href="/automation"><i class="bi bi-arrow-repeat"></i><span>Automation</span></a>{% endif %}
+        {% if is_admin_user %}
+        <div class="nav-label">Membership</div>
+        <a class="nav-item nav-item-emphasis {{ 'active' if path.startswith('/members') else '' }}" href="/members"><i class="bi bi-people-fill"></i><span>Member Management</span></a>
+        <a class="nav-item {{ 'active' if path.startswith('/admin') else '' }}" href="/admin"><i class="bi bi-sliders"></i><span>Admin Settings</span></a>
+        {% endif %}
+        <a class="nav-item {{ 'active' if path.startswith('/account') else '' }}" href="/account"><i class="bi bi-person-gear"></i><span>Akun Saya</span></a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="avatar">{{ (username or 'A')[:1]|upper }}</div>
+          <div class="user-copy"><strong>{{ username or 'User' }}</strong><small>{{ user_role|replace('_', ' ')|title }}</small></div>
+          <a href="/logout" class="icon-button" title="Keluar"><i class="bi bi-box-arrow-right"></i></a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-button d-lg-none" id="sidebarOpen" aria-label="Buka menu"><i class="bi bi-list"></i></button>
+          <div>
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <p>{% block page_subtitle %}Professional football intelligence workspace{% endblock %}</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-chip"><span class="status-pulse"></span>System Online</span>
+          <button class="icon-button" id="themeToggle" title="Ganti tema"><i class="bi bi-moon-stars"></i></button>
+        </div>
+      </header>
+
+      <main class="content-area">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <script src="{{ url_for('static', path='js/app.js') }}?v=11.0.0"></script>
+</body>
+</html>

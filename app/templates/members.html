@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Member · {{ app_name }}{% endblock %}
+{% block page_title %}Member Management{% endblock %}
+{% block page_subtitle %}Dashboard akun, masa aktif, pencarian, dan kontrol akses member{% endblock %}
+{% block content %}
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="row g-3 mb-4">
+  {% for label, value, icon, tone in [
+    ('Total Akun',summary.total,'people','primary'),
+    ('Aktif',summary.active,'person-check','success'),
+    ('Expired',summary.expired,'clock-history','warning'),
+    ('Disabled',summary.disabled,'person-x','danger'),
+    ('Berakhir ≤7 Hari',summary.expiring,'exclamation-triangle','info')
+  ] %}
+  <div class="col-6 col-xl"><div class="metric-card h-100 member-metric member-metric-{{ tone }}"><div class="metric-icon"><i class="bi bi-{{ icon }}"></i></div><small>{{ label }}</small><strong>{{ value }}</strong></div></div>
+  {% endfor %}
+</div>
+
+<div class="card-panel mb-4">
+  <div class="section-heading"><div><h2>Cari dan Filter</h2><p>Temukan akun berdasarkan nama, username, status, role, atau masa aktif.</p></div></div>
+  <form method="get" action="/members" class="row g-2 align-items-end">
+    <div class="col-lg-4"><label class="form-label">Cari member</label><input class="form-control" name="q" value="{{ filters.q }}" placeholder="Nama atau username"></div>
+    <div class="col-6 col-lg-2"><label class="form-label">Status</label><select class="form-select" name="status"><option value="">Semua</option>{% for v in ['ACTIVE','EXPIRED','DISABLED'] %}<option value="{{ v }}" {% if filters.status==v %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-lg-2"><label class="form-label">Role</label><select class="form-select" name="role"><option value="">Semua</option>{% for v in ['SUPER_ADMIN','ADMIN','MEMBER'] %}<option value="{{ v }}" {% if filters.role==v %}selected{% endif %}>{{ v|replace('_',' ') }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-lg-2"><label class="form-label">Masa aktif</label><select class="form-select" name="expiry"><option value="">Semua</option><option value="EXPIRING_7" {% if filters.expiry=='EXPIRING_7' %}selected{% endif %}>≤7 hari</option><option value="EXPIRING_30" {% if filters.expiry=='EXPIRING_30' %}selected{% endif %}>≤30 hari</option></select></div>
+    <div class="col-6 col-lg-2 d-grid"><button class="btn btn-primary"><i class="bi bi-search me-1"></i> Terapkan</button></div>
+    {% if filters.q or filters.status or filters.role or filters.expiry %}<div class="col-12"><a href="/members" class="btn btn-sm btn-outline-secondary">Reset filter</a></div>{% endif %}
+  </form>
+</div>
+
+<div class="card-panel mb-4">
+  <div class="section-heading"><div><h2>Tambah Akun</h2><p>Password minimal 8 karakter. Tanggal berakhir wajib untuk role Member.</p></div></div>
+  <form method="post" action="/members/create" class="row g-3">
+    <div class="col-md-3"><label class="form-label">Username</label><input class="form-control" name="username" minlength="3" required></div>
+    <div class="col-md-3"><label class="form-label">Nama lengkap</label><input class="form-control" name="full_name"></div>
+    <div class="col-md-2"><label class="form-label">Password awal</label><input class="form-control" type="password" name="password" minlength="8" required></div>
+    <div class="col-md-2"><label class="form-label">Role</label><select class="form-select" name="role"><option value="MEMBER">Member</option><option value="ADMIN">Admin</option></select></div>
+    <div class="col-md-2"><label class="form-label">Berakhir</label><input class="form-control" type="datetime-local" name="membership_expires_at"></div>
+    <div class="col-12"><button class="btn btn-primary"><i class="bi bi-person-plus me-1"></i> Tambah Akun</button></div>
+  </form>
+</div>
+
+<div class="card-panel">
+  <div class="section-heading"><div><h2>Daftar Akun</h2><p>{{ users|length }} akun ditampilkan. Klik detail untuk edit, perpanjang, melihat riwayat, atau reset password.</p></div></div>
+  <div class="table-responsive">
+    <table class="table align-middle member-table">
+      <thead><tr><th>Member</th><th>Role</th><th>Berakhir</th><th>Sisa</th><th>Status</th><th>Login Terakhir</th><th></th></tr></thead>
+      <tbody>
+      {% for user in users %}
+      <tr>
+        <td><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ (user.full_name or user.username)[:1]|upper }}</span><div><strong>{{ user.full_name or user.username }}</strong><br><small class="text-secondary">@{{ user.username }}</small></div></div></td>
+        <td><span class="badge text-bg-secondary">{{ user.role|replace('_',' ') }}</span></td>
+        <td>{{ user.membership_expires_at.strftime('%d-%m-%Y %H:%M') if user.membership_expires_at else 'Tanpa batas' }}</td>
+        <td>{% if user.days_remaining is none %}—{% elif user.days_remaining <= 7 %}<strong class="text-warning">{{ user.days_remaining }} hari</strong>{% else %}{{ user.days_remaining }} hari{% endif %}</td>
+        <td><span class="badge {% if user.status == 'ACTIVE' %}text-bg-success{% elif user.status == 'EXPIRED' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ user.status }}</span></td>
+        <td>{{ user.last_login_at.strftime('%d-%m-%Y %H:%M') if user.last_login_at else 'Belum pernah' }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="/members/{{ user.id }}"><i class="bi bi-eye me-1"></i> Detail</a></td>
+      </tr>
+      {% else %}<tr><td colspan="7" class="text-center text-secondary py-4">Tidak ada akun yang sesuai filter.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page_title %}AI Decision Center{% endblock %}
+{% block page_subtitle %}Best Market dipisahkan dari Recommendation; hanya PICK/STRONG/ELITE yang menjadi rekomendasi publik{% endblock %}
+{% block content %}
+<section class="panel-card mb-3 today-brief">
+  <div><span class="eyebrow">DECISION SUPPORT BRIEF</span><h2>Final Decision & Best Builder — {{ selected_date }}</h2>
+  <p class="text-muted mb-0">{{ daily_brief }}</p></div>
+  <form class="today-date-form"><input class="form-control" type="date" name="pick_date" value="{{ selected_date }}"><button class="btn btn-primary">Tampilkan</button></form>
+</section>
+<div class="row g-3 mb-3">
+  {% for name,label in [('ELITE_PICK','Elite Pick'),('STRONG_PICK','Strong Pick'),('PICK','Pick'),('MONITOR','Monitor'),('NO_BET','No Bet')] %}
+  <div class="col-6 col-lg"><div class="metric-card h-100"><span class="metric-label">{{ label }}</span><div class="metric-value">{{ groups[name]|length }}</div></div></div>
+  {% endfor %}
+</div>
+{% if selected_pick %}
+<section class="panel-card selected-pick-card mb-3">
+  <span class="eyebrow">{{ selected_pick.decision_label }}</span>
+  <h2>{{ selected_pick.home_team }} vs {{ selected_pick.away_team }}</h2>
+  <div class="selected-pick-name">{{ selected_pick.pick }}</div>
+  <div class="row g-3 mt-1">
+    <div class="col-6 col-md-3"><small>Probability</small><strong>{{ selected_pick.probability_pct }}%</strong></div>
+    <div class="col-6 col-md-3"><small>Confidence</small><strong>{{ selected_pick.confidence|round(1) }}%</strong></div>
+    <div class="col-6 col-md-3"><small>Model Agreement</small><strong>{{ selected_pick.agreement|round(1) }}%</strong></div>
+    <div class="col-6 col-md-3"><small>EV</small><strong>{% if selected_pick.odds %}{{ selected_pick.ev_pct }}%{% else %}Belum dinilai{% endif %}</strong></div>
+  </div>
+  {% if not selected_pick.odds %}<div class="alert alert-info mt-3 mb-0">Odds belum tersedia; rekomendasi ini adalah model pick dan belum merupakan klaim value.</div>{% endif %}
+  <a class="btn btn-primary mt-3" href="/match/{{ selected_pick.fixture_id }}">Buka Analisis</a>
+</section>
+{% else %}
+<div class="panel-card mb-3 empty-state"><i class="bi bi-shield-x"></i><h3>Tidak ada Selected Pick</h3><p>Belum ada hasil yang memenuhi kualifikasi model minimum. Jalankan Scanner bertahap atau pilih tanggal lain.</p><a class="btn btn-primary" href="/scanner?scan_date={{ selected_date }}">Jalankan Scanner</a></div>
+{% endif %}
+{% if best_builder %}
+<section class="panel-card mb-3 selected-builder-card">
+  <span class="eyebrow">BEST BUILDER OF THE DAY</span><h2>{{ best_builder.combined_label }}</h2>
+  {% if best_builder.home_team %}<p class="text-muted mb-2">{{ best_builder.home_team }} vs {{ best_builder.away_team }}</p>{% endif %}
+  <span class="badge-soft success">{{ best_builder.display_status }}</span>
+  <div class="row g-3 mt-2">
+    <div class="col-6 col-md-3"><small>Combined Probability</small><strong>{{ best_builder.probability_pct }}%</strong></div>
+    <div class="col-6 col-md-3"><small>Fair Odds</small><strong>{{ best_builder.fair_odds }}</strong></div>
+    <div class="col-6 col-md-3"><small>Bookmaker Odds</small><strong>{{ best_builder.combined_odds if best_builder.complete_odds else 'Belum tersedia' }}</strong></div>
+    <div class="col-6 col-md-3"><small>EV</small><strong>{% if best_builder.ev is not none %}{{ (best_builder.ev*100)|round(1) }}%{% else %}Belum dinilai{% endif %}</strong></div>
+  </div>
+  <p class="mt-3 mb-1"><b>Mengapa cocok digabungkan?</b> {{ best_builder.compatibility_reason }}</p>
+  <p class="text-muted mb-2">{{ best_builder.narrative }}</p>
+  {% if best_builder.fixture_id %}<a class="btn btn-outline-primary" href="/match/{{ best_builder.fixture_id }}">Buka Analisis Builder</a>{% endif %}
+</section>
+{% else %}
+<section class="panel-card mb-3 empty-state"><i class="bi bi-diagram-3"></i><h3>Best Builder belum tersedia</h3><p>Tidak ada kombinasi yang lolos logika sepak bola, probabilitas minimum, dan Quality Gate.</p></section>
+{% endif %}
+<section class="panel-card"><div class="section-heading"><div><span class="eyebrow">AUDIT TRAIL</span><h3>Keputusan pendukung yang tersimpan</h3></div><span class="badge-soft">{{ rows|length }} pick</span></div>
+<div class="table-responsive"><table class="table align-middle"><thead><tr><th>Match</th><th>Pick</th><th>Status</th><th>Probability</th><th>Confidence</th><th>PQI/Core</th><th>EV</th></tr></thead><tbody>
+{% for r in rows %}<tr><td><a href="/match/{{ r.fixture_id }}"><strong>{{ r.home_team }} vs {{ r.away_team }}</strong></a><br><small>{{ r.league }}</small></td><td>{{ r.pick }}</td><td><span class="badge-soft {% if r.status in ['ELITE_PICK','STRONG_PICK','PICK'] %}success{% elif r.status == 'NO_BET' %}danger{% else %}warning{% endif %}">{{ r.status|replace('_',' ') }}</span></td><td>{{ r.probability_pct }}%</td><td>{{ (r.confidence or 0)|round(1) }}%</td><td>{{ (r.pqi or 0)|round(1) }}/{{ r.health|round(1) }}</td><td>{% if r.odds %}{{ r.ev_pct }}%{% else %}<span class="text-muted">Belum dinilai</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="7" class="text-center text-muted py-4">Belum ada hasil scanner untuk tanggal ini.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

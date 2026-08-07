@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block page_title %}Sportsbook Builder AI{% endblock %}
+{% block content %}
+<div class="page-header mb-3">
+  <div><span class="eyebrow">V13 · SPORTSBOOK BUILDER AI</span><h2 class="mb-1">Builder Portfolio</h2><p class="text-muted mb-0">Builder memakai market Bet Builder umum sportsbook. Asian Handicap hanya single market dan tidak pernah menjadi leg Builder.</p></div>
+  <a href="/matches" class="btn btn-primary">Analisis Pertandingan</a>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Fixture diaudit</span><strong>{{ total_predictions }}</strong><small>Decision record hari ini</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Portfolio Builder</span><strong>{{ builders_found }}</strong><small>Maksimal 3 per fixture</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Leg</span><strong>2</strong><small>Sportsbook-compatible</small></div></div>
+  <div class="col-6 col-lg-3"><div class="metric-card"><span>Handicap</span><strong>Single</strong><small>Tidak masuk Builder</small></div></div>
+</div>
+{% if builder_rows %}
+<div class="panel-card mb-3"><span class="eyebrow">BUILDER PORTFOLIO TERBARU</span>
+  <div class="table-responsive mt-3"><table class="table align-middle"><thead><tr><th>Match</th><th>Portfolio</th><th>Sportsbook Builder</th><th>DNA</th><th>Prob.</th><th>Quality</th><th>EV</th><th>Risk</th><th></th></tr></thead><tbody>
+  {% for b in builder_rows %}<tr>
+    <td><b>{{ b.home_team }} vs {{ b.away_team }}</b><br><small class="text-muted">{{ b.league }} · {{ b.fixture_date }}</small></td>
+    <td><b>#{{ b.portfolio_rank or 1 }} {{ b.portfolio_label or b.display_status }}</b><br><small>{{ '★' * (b.stars or 0) }}</small></td>
+    <td><b>{{ b.combined_label }}</b></td><td>{{ b.builder_dna or b.template_name }}</td>
+    <td>{{ b.probability_pct }}%</td><td>{{ b.builder_quality }}/100</td>
+    <td>{% if b.ev is not none %}{{ (b.ev*100)|round(1) }}%{% else %}N/A{% endif %}</td><td>{{ b.risk }}</td>
+    <td><a class="btn btn-sm btn-outline-primary" href="/match/{{ b.fixture_id }}">Detail</a></td>
+  </tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% else %}<div class="alert alert-warning"><b>Belum ada Builder yang lolos.</b> Sistem tidak memaksakan kombinasi jika template, probability gate, data quality, EV, atau sportsbook compatibility gagal.</div>{% endif %}
+<div class="panel-card"><span class="eyebrow">BUILDER DIAGNOSTICS</span><h4>Sportsbook Template Audit</h4>
+<div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>Pertandingan</th><th>Templates</th><th>Qualified</th><th>Portfolio</th><th>Threshold</th><th>Unavailable</th><th>Compatibility</th><th>Gate</th><th>EV</th></tr></thead><tbody>
+{% for r in diagnostic_rows %}{% set d=r.diagnostics %}<tr><td><b>{{ r.home_team }} vs {{ r.away_team }}</b><br><small class="text-muted">{{ r.fixture_date }}</small></td><td>{{ d.templates_evaluated or 0 }}/{{ d.templates_total or 0 }}</td><td>{{ d.qualified_pairs or 0 }}</td><td>{{ d.portfolio_size or 0 }}</td><td>{{ d.rejected_activation_threshold or 0 }}</td><td>{{ d.rejected_market_unavailable or 0 }}</td><td>{{ d.rejected_sportsbook_compatibility or 0 }}</td><td>{{ d.rejected_quality_gate or 0 }}</td><td>{{ d.rejected_negative_ev or 0 }}</td></tr>{% else %}<tr><td colspan="9" class="text-muted">Belum ada diagnostik Builder V13. Jalankan analisis atau scanner setelah deploy.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

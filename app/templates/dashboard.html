@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Ringkasan performa model dan aktivitas prediksi{% endblock %}
+{% block content %}
+<section class="welcome-card mb-4">
+  <div>
+    <span class="eyebrow">AI FOOTBALL PREDICTOR PRO</span>
+    <h2>Ambil keputusan lebih tajam, bukan sekadar menebak.</h2>
+    <p>Analisis pertandingan, validasi probabilitas, temukan value, dan bangun kombinasi yang tetap terkontrol.</p>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="/matches?match_date={{ today }}"><i class="bi bi-calendar-check me-2"></i>Lihat Pertandingan Hari Ini</a>
+      <a class="btn btn-soft" href="/scanner"><i class="bi bi-search me-2"></i>Jalankan Scanner</a>
+    </div>
+  </div>
+  <div class="welcome-visual">
+    <div class="score-orbit"><span>AI</span></div>
+    <div class="mini-stat"><small>Model</small><strong>Ensemble</strong></div>
+    <div class="mini-stat"><small>Quality</small><strong>PQI</strong></div>
+  </div>
+</section>
+
+<div class="row g-3 mb-4">
+  {% for label,value,icon,meta in [
+    ('Settled',performance.predictions,'bi-bullseye','Settlement selesai'),
+    ('Accuracy',performance.accuracy|string+'%','bi-check2-circle','Prediksi settled'),
+    ('Profit',performance.profit|string+' u','bi-wallet2','Settlement profit'),
+    ('ROI',performance.roi|string+'%','bi-graph-up-arrow','Settlement ROI')
+  ] %}
+  <div class="col-6 col-xl-3">
+    <div class="metric-card">
+      <div class="metric-icon"><i class="bi {{ icon }}"></i></div>
+      <div class="metric-label">{{ label }}</div>
+      <div class="metric-value">{{ value }}</div>
+      <div class="metric-meta">{{ meta }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="panel-card h-100">
+      <div class="section-heading">
+        <div><span class="eyebrow">CORE MODULES</span><h3>Workflow analisis</h3></div>
+        <span class="badge-soft success">4 modul aktif</span>
+      </div>
+      <div class="module-grid">
+        <a class="module-item" href="/matches">
+          <span class="module-icon"><i class="bi bi-cpu"></i></span>
+          <span><strong>Prediction Engine</strong><small>Poisson, form, Elo-like, xG, confidence</small></span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="module-item" href="/predictions">
+          <span class="module-icon"><i class="bi bi-percent"></i></span>
+          <span><strong>Odds & EV</strong><small>Fair odds, implied probability, expected value</small></span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="module-item" href="/bet-builder">
+          <span class="module-icon"><i class="bi bi-layers"></i></span>
+          <span><strong>Bet Builder</strong><small>Safe, Balanced, Aggressive, correlation filter</small></span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
+        <a class="module-item" href="/backtesting">
+          <span class="module-icon"><i class="bi bi-shield-check"></i></span>
+          <span><strong>Validation</strong><small>Calibration, scanner, backtesting, paper trading</small></span>
+          <i class="bi bi-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="panel-card h-100">
+      <div class="section-heading"><div><span class="eyebrow">SYSTEM</span><h3>Status layanan</h3></div></div>
+      <div class="status-list">
+        <div><span><i class="bi bi-globe2"></i> Web Application</span><strong class="text-success">Online</strong></div>
+        <div><span><i class="bi bi-cloud-check"></i> API-Football</span><strong class="{{ 'text-success' if api_configured else 'text-warning' }}">{{ 'Ready' if api_configured else 'Setup' }}</strong></div>
+        <div><span><i class="bi bi-database-check"></i> Database</span><strong class="text-success">Ready</strong></div>
+        <div><span><i class="bi bi-git"></i> Release</span><strong>v13.1 Performance Intelligence</strong></div>
+      </div>
+      <div class="system-note"><i class="bi bi-info-circle"></i><span>Gunakan Scanner untuk menyaring pertandingan yang memenuhi batas confidence, PQI, dan EV.</span></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

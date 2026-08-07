@@ -1,0 +1,95 @@
+{% extends "base.html" %}{% block page_title %}Admin & Quality Control<script>
+(() => {
+  const boxes = [...document.querySelectorAll('.league-checkbox')];
+  const count = document.getElementById('selectedLeagueCount');
+  const mode = document.getElementById('leagueFilterMode');
+  const selectedOptions = document.getElementById('selectedLeagueOptions');
+  const recommended = new Set(['2','3','848','39','40','140','135','78','61','88','94','113','103','119','128','71','98']);
+  const update = () => {
+    const selected = boxes.filter(b => b.checked).length;
+    if (count) count.textContent = `${selected} liga dipilih`;
+    if (selectedOptions) selectedOptions.style.opacity = mode?.value === 'ALL' ? '0.55' : '1';
+    boxes.forEach(b => b.disabled = mode?.value === 'ALL');
+  };
+  document.getElementById('selectAllLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = true); update(); });
+  document.getElementById('clearAllLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = false); update(); });
+  document.getElementById('recommendedLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = recommended.has(b.value)); update(); });
+  mode?.addEventListener('change', update); boxes.forEach(b => b.addEventListener('change', update)); update();
+})();
+</script>
+{% endblock %}{% block content %}
+{% if is_admin_user %}
+<div class="card-panel membership-shortcut mb-4">
+  <div>
+    <span class="eyebrow">Membership</span>
+    <h2>Kelola Member dan Masa Aktif</h2>
+    <p>Tambah akun, perpanjang masa aktif, reset password, nonaktifkan akun, dan lihat riwayat perubahan.</p>
+  </div>
+  <a class="btn btn-primary" href="/members"><i class="bi bi-people-fill me-1"></i> Buka Member Management</a>
+</div>
+{% endif %}
+<div class="row g-3">
+  {% if message %}<div class="col-12"><div class="alert alert-success">{{ message }}</div></div>{% endif %}
+  {% if error %}<div class="col-12"><div class="alert alert-danger"><strong>Pengaturan tidak disimpan.</strong><br>{{ error }}</div></div>{% endif %}
+  <div class="col-lg-7">
+    <div class="panel-card mb-3">
+      <h5>Prediction Quality Settings</h5>
+      <form method="post" action="/admin/settings" class="row g-3">
+        <div class="col-md-6"><label>Minimum Confidence</label><input class="form-control" type="number" step="0.1" name="min_confidence" value="{{ settings_values.min_confidence }}"></div>
+        <div class="col-md-6"><label>Minimum PQI</label><input class="form-control" type="number" step="0.1" name="min_pqi" value="{{ settings_values.min_pqi }}"></div>
+        <div class="col-md-6"><label>Minimum EV</label><input class="form-control" type="number" step="0.01" name="min_ev" value="{{ settings_values.min_ev }}"></div>
+        <div class="col-md-6"><label>Maximum Builder Legs</label><input class="form-control" type="number" min="2" max="2" name="max_builder_legs" value="2" readonly><small class="text-muted">Best Builder selalu 2 market agar mudah dipahami.</small></div>
+        <div class="col-md-6"><label>Kelly Fraction</label><input class="form-control" type="number" step="0.05" name="kelly_fraction" value="{{ settings_values.kelly_fraction }}"></div>
+
+        <div class="col-12"><hr><span class="eyebrow">SCANNER SETTINGS</span><h5 class="mt-1">Batch & Stability</h5></div>
+        <div class="col-md-6"><label>Scanner Profile</label><select class="form-select" name="scanner_profile">
+          {% for p in ['SAFE','BALANCED','FAST','CUSTOM'] %}<option value="{{ p }}" {% if settings_values.scanner_profile == p %}selected{% endif %}>{{ p|title }}</option>{% endfor %}
+        </select><small class="text-muted">Preset hanya menyesuaikan worker, retry, dan delay. Batch tetap 10.</small></div>
+        <div class="col-md-6"><label>Batch Size</label><input class="form-control" type="number" name="scanner_limit" value="10" readonly><small class="text-muted">Dikunci 10 pertandingan per batch untuk stabilitas Render.</small></div>
+        <div class="col-md-4"><label>Concurrent Workers</label><input class="form-control" type="number" min="1" max="4" name="scanner_concurrency" value="{{ settings_values.scanner_concurrency }}"></div>
+        <div class="col-md-4"><label>Retry per Fixture</label><input class="form-control" type="number" min="0" max="5" name="scanner_retry" value="{{ settings_values.scanner_retry }}"></div>
+        <div class="col-md-4"><label>Delay (detik)</label><input class="form-control" type="number" min="0" max="10" step="0.5" name="scanner_delay_seconds" value="{{ settings_values.scanner_delay_seconds }}"></div>
+        <div class="col-md-6"><label>Timeout per Fixture</label><input class="form-control" type="number" min="15" max="60" name="scanner_timeout_seconds" value="{{ settings_values.scanner_timeout_seconds }}"></div>
+        <div class="col-md-6 d-flex align-items-end"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="scanner_skip_existing" value="true" {% if settings_values.scanner_skip_existing %}checked{% endif %}><label class="form-check-label">Lewati fixture yang sudah dipindai</label></div></div>
+        <div class="col-12"><div class="alert alert-info mb-0"><b>Rekomendasi Render:</b> Safe untuk paket kecil, Balanced untuk paket sedang. Fast berisiko timeout/502 jika RAM dan CPU terbatas.</div></div>
+
+        <div class="col-12"><hr><span class="eyebrow">LEAGUE FILTER</span><h5 class="mt-1">Negara & Liga yang Dipindai</h5><p class="text-secondary mb-2">Pilih apakah Scanner memproses semua liga atau hanya daftar pilihan. Batch tetap 10.</p></div>
+        {% set league_mode = settings_values.scanner_league_filter_mode or ('SELECTED' if settings_values.scanner_league_filter_enabled else 'ALL') %}
+        <div class="col-12">
+          <label>Mode Pemindaian Liga</label>
+          <select class="form-select" name="scanner_league_filter_mode" id="leagueFilterMode">
+            <option value="ALL" {% if league_mode == 'ALL' %}selected{% endif %}>Semua negara & semua liga (tanpa filter)</option>
+            <option value="SELECTED" {% if league_mode == 'SELECTED' %}selected{% endif %}>Hanya negara & liga pilihan</option>
+          </select>
+          <small class="text-muted">Mode Semua Liga tetap hanya memproses pertandingan NS/TBD yang belum kickoff.</small>
+          <input type="hidden" name="scanner_league_filter_enabled" value="{{ 'true' if league_mode == 'SELECTED' else 'false' }}">
+        </div>
+        <div class="col-12" id="selectedLeagueOptions"><div class="d-flex flex-wrap gap-2 mb-2"><button type="button" class="btn btn-sm btn-outline-primary" id="selectAllLeagues">Pilih Semua</button><button type="button" class="btn btn-sm btn-outline-secondary" id="clearAllLeagues">Hapus Semua</button><button type="button" class="btn btn-sm btn-outline-success" id="recommendedLeagues">Liga Rekomendasi</button><span class="badge-soft ms-auto" id="selectedLeagueCount">0 liga dipilih</span></div><div class="alert alert-secondary py-2">Daftar berikut hanya digunakan saat mode <b>Hanya negara & liga pilihan</b> aktif.</div><div class="row g-2">{% for league in top_league_presets %}<div class="col-12 col-md-6"><label class="league-option"><input class="form-check-input me-2" type="checkbox" class="league-checkbox" name="scanner_league_ids" value="{{ league.id }}" {% if league.id in settings_values.scanner_allowed_league_ids %}checked{% endif %}><span><b>{{ league.name }}</b><small>{{ league.country }} · ID {{ league.id }}</small></span></label></div>{% endfor %}</div></div>
+        <div class="col-12"><label>Tambahkan League ID lain</label><input class="form-control" type="text" name="scanner_custom_league_ids" placeholder="Contoh: 40, 144, 179"><small class="text-muted">Pisahkan dengan koma. ID yang ditambahkan akan ikut disimpan bersama liga pilihan di atas.</small></div>
+        <div class="col-12"><button class="btn btn-primary">Simpan Pengaturan</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5"><div class="panel-card"><h5>Status Data</h5><p>API-Football <b class="float-end">{{ 'Configured' if api_configured else 'Not Configured' }}</b></p><p>Quota Limit <b class="float-end">{{ quota.limit or '-' }}</b></p><p>Quota Remaining <b class="float-end">{{ quota.remaining if quota.remaining is not none else '-' }}</b></p><p>Quota Status <b class="float-end">{{ quota.status }}</b></p><p>Reset Harian <b class="float-end">08:00 WITA</b></p><hr><small class="text-secondary">Adaptive learning hanya mengubah bobot setelah sampel mencukupi.</small></div></div>
+</div>
+<section class="card mt-4"><div class="card-body"><div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3"><div><h2 class="h5 mb-1">Database Foundation</h2><p class="text-secondary mb-0">Penyimpanan permanen untuk Master Data, Prediction Data, dan Analytics Data.</p></div><span class="badge text-bg-success">Schema {{ database_status.schema_version or 'Ready' }}</span></div><div class="row g-3"><div class="col-md-3"><div class="metric-card"><span>Engine</span><strong>{{ database_status.dialect|upper }}</strong></div></div><div class="col-md-3"><div class="metric-card"><span>Tables</span><strong>{{ database_status.table_count }}</strong></div></div><div class="col-md-3"><div class="metric-card"><span>Indexes</span><strong>{{ database_status.index_count }}</strong></div></div><div class="col-md-3"><div class="metric-card"><span>Migrations</span><strong>{{ database_status.migrations|length }}</strong></div></div></div></div></section>
+<script>
+(() => {
+  const boxes = [...document.querySelectorAll('.league-checkbox')];
+  const count = document.getElementById('selectedLeagueCount');
+  const mode = document.getElementById('leagueFilterMode');
+  const selectedOptions = document.getElementById('selectedLeagueOptions');
+  const recommended = new Set(['2','3','848','39','40','140','135','78','61','88','94','113','103','119','128','71','98']);
+  const update = () => {
+    const selected = boxes.filter(b => b.checked).length;
+    if (count) count.textContent = `${selected} liga dipilih`;
+    if (selectedOptions) selectedOptions.style.opacity = mode?.value === 'ALL' ? '0.55' : '1';
+    boxes.forEach(b => b.disabled = mode?.value === 'ALL');
+  };
+  document.getElementById('selectAllLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = true); update(); });
+  document.getElementById('clearAllLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = false); update(); });
+  document.getElementById('recommendedLeagues')?.addEventListener('click', () => { boxes.forEach(b => b.checked = recommended.has(b.value)); update(); });
+  mode?.addEventListener('change', update); boxes.forEach(b => b.addEventListener('change', update)); update();
+})();
+</script>
+{% endblock %}

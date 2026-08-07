@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_title %}Professional Scanner{% endblock %}
+{% block page_subtitle %}Hanya memproses pertandingan NS/TBD dengan kickoff yang belum lewat, secara batch terkontrol{% endblock %}
+{% block content %}
+<div class="panel-card mb-3">
+  <div class="row g-3 align-items-end">
+    <div class="col-md-5">
+      <form method="get" action="/scanner" class="row g-2"><div class="col-8"><label class="form-label">Tanggal pertandingan</label><input class="form-control" type="date" name="scan_date" value="{{ selected_date }}"></div><div class="col-4 d-flex align-items-end"><button class="btn btn-outline-secondary w-100">Preview</button></div></form>
+    </div>
+    <div class="col-md-4">
+      <form method="post" action="/scanner/run"><input type="hidden" name="scan_date" value="{{ selected_date }}"><button class="btn btn-primary w-100" {% if quota_paused %}disabled{% endif %}><i class="bi bi-play-circle me-2"></i>{% if already_scanned %}Lanjutkan Batch Berikutnya{% else %}Jalankan Scanner{% endif %}</button></form>
+    </div>
+    <div class="col-md-3"><a class="btn btn-outline-secondary w-100" href="/admin"><i class="bi bi-sliders me-2"></i>Scanner Settings</a></div>
+  </div>
+</div>
+{% if error %}<div class="alert alert-danger"><strong>Scanner tidak dijalankan.</strong><br>{{ error }}{% if "Tidak ada liga" in error %}<div class="mt-2"><a class="btn btn-sm btn-outline-light" href="/admin">Pilih Liga di Admin</a></div>{% endif %}</div>{% endif %}{% if quota_paused %}<div class="alert alert-warning"><strong>Kuota API habis.</strong><br>Scanner dijeda dan tidak mengirim request baru. Lanjutkan setelah {{ quota_status.reset_at or '08:00 WITA' }}.</div>{% endif %}
+<div class="alert alert-info d-flex align-items-start gap-2"><i class="bi bi-shield-check mt-1"></i><div><strong>Anti data-leakage aktif.</strong> Hanya fixture NS/TBD dengan kickoff di masa depan. Pengaturan aktif: profil <b>{{ scanner_settings.scanner_profile }}</b>, batch tetap <b>10</b>, worker <b>{{ scanner_settings.scanner_concurrency }}</b>, retry <b>{{ scanner_settings.scanner_retry }}</b>. Mode liga: <b>{{ 'Semua negara & liga' if (scanner_settings.scanner_league_filter_mode == 'ALL' or not scanner_settings.scanner_league_filter_enabled) else 'Hanya liga pilihan' }}</b>{% if scanner_settings.scanner_league_filter_mode != 'ALL' and scanner_settings.scanner_league_filter_enabled %} ({{ scanner_settings.scanner_allowed_league_ids|length }} liga){% endif %}.</div></div>
+{% if progressive_summary %}
+<section class="panel-card mb-3">
+  <div class="section-heading"><div><span class="eyebrow">API INTELLIGENCE</span><h3>Progressive Data Loading</h3></div><span class="badge-soft success">Batch tetap 10</span></div>
+  <div class="row g-3">
+    <div class="col-4"><div class="metric-card h-100"><span class="metric-label">Core Analysis</span><div class="metric-value">{{ progressive_summary.core }}</div><div class="metric-meta">Form 10 + model API</div></div></div>
+    <div class="col-4"><div class="metric-card h-100"><span class="metric-label">Candidate Enrichment</span><div class="metric-value">{{ progressive_summary.candidate }}</div><div class="metric-meta">H2H + statistik + standings</div></div></div>
+    <div class="col-4"><div class="metric-card h-100"><span class="metric-label">Final Enrichment</span><div class="metric-value">{{ progressive_summary.final }}</div><div class="metric-meta">Odds + cedera + line-up</div></div></div>
+  </div>
+  {% if api_usage %}<div class="row g-3 mt-1">
+    <div class="col-6 col-lg-3"><div class="metric-card h-100"><span class="metric-label">Network Requests</span><div class="metric-value">{{ api_usage.network_requests }}</div></div></div>
+    <div class="col-6 col-lg-3"><div class="metric-card h-100"><span class="metric-label">Cache Hits</span><div class="metric-value">{{ api_usage.cache_hits }}</div></div></div>
+    <div class="col-6 col-lg-3"><div class="metric-card h-100"><span class="metric-label">Cache Hit Rate</span><div class="metric-value">{{ api_usage.cache_hit_rate }}%</div></div></div>
+    <div class="col-6 col-lg-3"><div class="metric-card h-100"><span class="metric-label">API Remaining</span><div class="metric-value">{{ quota_status.remaining if quota_status.remaining is not none else '-' }}</div></div></div>
+  </div>{% endif %}
+</section>
+{% endif %}
+<div class="row g-3 mb-3">
+  {% for label,value,meta in [('Total Belum Mulai',total_upcoming,'NS/TBD dan kickoff masih di depan'),('Batch Berikutnya',upcoming_count,'Jumlah yang akan/baru diproses'),('Sudah Tersimpan',already_scanned,'Tidak dianalisis ulang'),('Tersisa',remaining,'Siap diproses sekarang'),('Menunggu Refresh',deferred_refresh|default(0),'Evidence menunggu waktu retry'),('Dikeluarkan',excluded_started,'Live, selesai, ditunda, atau kickoff lewat'),('Di luar Liga',excluded_league,'Tidak termasuk daftar liga Scanner'),('Gagal',failed_count,'Fixture gagal tidak menghentikan batch')] %}
+  <div class="col-6 col-lg"><div class="metric-card scanner-summary h-100"><span class="metric-label">{{ label }}</span><div class="metric-value">{{ value }}</div><div class="metric-meta">{{ meta }}</div></div></div>
+  {% endfor %}
+</div>
+{% if preview_only %}<div class="panel-card mb-3 empty-state"><i class="bi bi-list-check"></i><h3>Preview siap</h3><p>{{ remaining }} pertandingan belum diproses. Tekan <b>Jalankan Scanner</b> untuk memulai satu batch.</p></div>{% endif %}
+{% if best_picks %}<section class="panel-card mb-3"><div class="section-heading"><div><span class="eyebrow">TOP RECOMMENDATIONS</span><h3>Best Picks dari Batch Ini</h3></div><span class="badge-soft success">Top {{ best_picks|length }}</span></div><div class="best-pick-grid">{% for r in best_picks %}<a class="best-pick-card" href="/match/{{ r.fixture_id }}"><div class="rank-badge">#{{ r.rank }}</div><small>{{ r.league }}</small><strong>{{ r.home }} vs {{ r.away }}</strong><span class="pick-name">{{ r.pick }}</span><div class="pick-metrics"><span>Score <b>{{ r.combined_score }}</b></span><span>PQI <b>{{ r.pqi }}</b></span><span>EV <b>{% if r.odds %}{{ r.ev }}%{% else %}N/A{% endif %}</b></span></div><div class="reason-line"><i class="bi bi-lightbulb"></i> {{ r.reasons|join(' · ') }}</div></a>{% endfor %}</div></section>{% endif %}
+<section class="panel-card mb-3"><div class="section-heading"><div><span class="eyebrow">BATCH RESULTS</span><h3>Hasil Batch Terakhir</h3></div><span class="badge-soft">{{ rows|length }} pertandingan</span></div><div class="table-responsive scanner-table-wrap"><table class="table scanner-table align-middle"><thead><tr><th>#</th><th>Match</th><th>Pick</th><th>Score</th><th>Prob.</th><th>Conf.</th><th>Agreement</th><th>PQI</th><th>EV</th><th>Status</th></tr></thead><tbody>{% for r in rows %}<tr><td><span class="rank-number">{{ r.rank }}</span></td><td><strong>{{ r.home }} vs {{ r.away }}</strong><br><small>{{ r.league }}</small><div class="scanner-reason">{{ r.reasons|join(' · ') }}</div></td><td><a href="/match/{{ r.fixture_id }}">{{ r.pick }}</a></td><td><span class="score-pill">{{ r.combined_score }}</span></td><td>{{ r.probability }}%</td><td>{{ r.confidence }}%</td><td>{{ r.model_agreement }}%</td><td>{{ r.pqi }}</td><td>{% if r.odds %}{{ r.ev }}%{% else %}<span class="text-muted">Belum dinilai</span>{% endif %}</td><td><span class="badge-soft {% if r.decision in ['ELITE_PICK','STRONG_PICK','PICK'] %}success{% elif r.decision == 'NO_BET' %}danger{% else %}warning{% endif %}">{{ r.decision|replace('_',' ') }}</span></td></tr>{% else %}<tr><td colspan="10" class="text-center text-muted py-4">Belum ada hasil batch. Gunakan tombol Jalankan Scanner.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel-card"><div class="section-heading"><div><span class="eyebrow">AUTO BACKTEST</span><h3>Hasil Prediksi Tersimpan — {{ selected_date }}</h3></div><span class="badge-soft">{{ backtest_summary.total }} settled</span></div><div class="row g-3 mb-3">{% for label,value,klass in [('WIN',backtest_summary.wins,'text-success'),('LOSS',backtest_summary.losses,'text-danger'),('VOID',backtest_summary.voids,''),('Hit Rate',backtest_summary.hit_rate|string+'%',''),('Profit',('%+.2f'|format(backtest_summary.profit)),'')] %}<div class="col-6 col-lg"><div class="metric-card h-100"><span class="metric-label">{{ label }}</span><div class="metric-value {{ klass }}">{{ value }}</div></div></div>{% endfor %}</div></section>
+{% endblock %}

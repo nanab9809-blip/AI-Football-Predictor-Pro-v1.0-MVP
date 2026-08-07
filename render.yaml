@@ -1,0 +1,36 @@
+databases:
+  - name: ai-football-predictor-db
+    plan: free
+    databaseName: football_predictor
+    user: football_predictor
+
+services:
+  - type: web
+    name: ai-football-predictor-pro
+    runtime: python
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: TIMEZONE
+        value: Asia/Makassar
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-football-predictor-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: API_FOOTBALL_KEY
+        sync: false
+      - key: AUTOMATION_ENABLED
+        value: true
+      - key: SETTLEMENT_INTERVAL_MINUTES
+        value: 30

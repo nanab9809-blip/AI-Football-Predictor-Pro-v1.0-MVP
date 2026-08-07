@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Akun Saya · {{ app_name }}{% endblock %}
+{% block page_title %}Akun Saya{% endblock %}
+{% block page_subtitle %}Informasi akun dan keamanan password{% endblock %}
+{% block content %}
+{% if message %}<div class="alert alert-success">{{ message }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row g-4">
+  <div class="col-lg-6"><div class="card-panel h-100"><h2>Informasi Akun</h2><dl class="row mt-4"><dt class="col-5">Username</dt><dd class="col-7">{{ current_user.username }}</dd><dt class="col-5">Nama</dt><dd class="col-7">{{ current_user.full_name or '-' }}</dd><dt class="col-5">Role</dt><dd class="col-7">{{ current_user.role }}</dd><dt class="col-5">Status</dt><dd class="col-7"><span class="badge text-bg-success">{{ current_user.status }}</span></dd><dt class="col-5">Masa aktif</dt><dd class="col-7">{{ current_user.membership_expires_at.strftime('%d-%m-%Y %H:%M') if current_user.membership_expires_at else 'Tanpa batas' }}</dd></dl></div></div>
+  <div class="col-lg-6"><div class="card-panel h-100"><h2>Ganti Password</h2><form method="post" action="/account/password" class="mt-4"><div class="mb-3"><label class="form-label">Password saat ini</label><input class="form-control" type="password" name="current_password" required></div><div class="mb-3"><label class="form-label">Password baru</label><input class="form-control" type="password" name="new_password" minlength="8" required></div><button class="btn btn-primary">Simpan Password Baru</button></form></div></div>
+</div>
+{% endblock %}
